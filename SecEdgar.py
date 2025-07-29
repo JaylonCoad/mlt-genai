@@ -34,8 +34,6 @@ class SecEdgar:
             self.tickerdict[ticker] = cik_info
             self.cikdict[cik_str] = cik_info
 
-    # url for the document format: https://www.sec.gov/Archives/edgar/data/{CIK}/{accessionNumber}/{primaryDocument}
-
     def get_filings(self, cik):
         headers = {'user-agent' : 'MLT CP jayloncoad@gmail.com'} # header needed so the SEC API can identify us
         cik = cik.zfill(10) # make sure the CIK number is 10 characters by adding zeroes
@@ -45,32 +43,30 @@ class SecEdgar:
         return r.json() # gives us the general company json file that includes everything and then we will use this to create a link to the specific file the user wants
 
     def annual_filing(self, cik, year):
-        # so my goal is to 
-        filings = self.get_filings(cik)["filings"]["recent"]
-        forms = filings["form"]
-        dates = filings["filingDate"]
-        accessionNumber = filings["accessionNumber"]
-        primaryDocument = filings["primaryDocument"]
-        found = False
-        #print(len(forms), len(dates), len(accessionNumber)) # since these are all the same size i can loop through them at the same time using i
-        for i in range(len(forms)):
-            if forms[i] == "10-K" and dates[i][0:4] == str(year): # trying to find the correct form at the correct year and then get the corresponding accessionNumber 
-                accessNumber = accessionNumber[i].replace("-", "")
-                primDocument = primaryDocument[i]
+        filings = self.get_filings(cik)["filings"]["recent"] # indexes the recent filings list
+        formsList = filings["form"] # finds the forms list according to how it's stored in the json
+        datesList = filings["filingDate"] # finds the dates list according to how it's stored in json
+        accessionNumberList = filings["accessionNumber"] # finds the accession number lists
+        primaryDocumentList = filings["primaryDocument"] # finds the primary document lists
+        found = False # used to see if we found the accession number
+        for i in range(len(formsList)):
+            if formsList[i] == "10-K" and datesList[i][0:4] == str(year): # trying to find the correct form at the correct year and then get the corresponding accessionNumber and primaryDocument
+                accessionNumber = accessionNumberList[i].replace("-", "") # remove the dashes
+                primaryDocument = primaryDocumentList[i]
                 found = True
-        if not found:
+        if not found: # handles not found
             print("Year not found. Try again")
         else:
-            return f"https://www.sec.gov/Archives/edgar/data/{cik}/{accessNumber}/{primDocument}"
+            return f"https://www.sec.gov/Archives/edgar/data/{cik}/{accessionNumber}/{primaryDocument}" # returns the url of the 10-K report
     
 
-    def quarterly_filing(cik, year, quarter):
+    def quarterly_filing(self, cik, year, quarter):
         pass
 
 se = SecEdgar('https://www.sec.gov/files/company_tickers.json')
 # unit testing website: https://www.guru99.com/unit-testing-guide.html
 
 cik = se.ticker_to_cik("AAPL")[0]
-se.annual_filing(cik, 2024)
+print(se.annual_filing(cik, 2024))
 
 
