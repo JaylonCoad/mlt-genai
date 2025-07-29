@@ -7,7 +7,7 @@ class SecEdgar:
         self.tickerdict = {} # maps ticker to CIK info
         self.cikdict = {} # maps CIK string/number to CIK info
         
-        headers = {'user-agent' : 'MLT CP jayloncoad@gmail.com'} # header needed so the SEC API can identify us 
+        headers = {'user-agent' : 'MLT CP jayloncoad@gmail.com'} # header needed so the SEC API can identify us
         r = requests.get(self.fileurl, headers=headers) # request the info from the SEC API
 
         self.filejson = r.json() # stores the JSON data into a dictionary in our class
@@ -34,8 +34,43 @@ class SecEdgar:
             self.tickerdict[ticker] = cik_info
             self.cikdict[cik_str] = cik_info
 
+    # url for the document format: https://www.sec.gov/Archives/edgar/data/{CIK}/{accessionNumber}/{primaryDocument}
+
+    def get_filings(self, cik):
+        headers = {'user-agent' : 'MLT CP jayloncoad@gmail.com'} # header needed so the SEC API can identify us
+        cik = cik.zfill(10) # make sure the CIK number is 10 characters by adding zeroes
+        url = f"https://data.sec.gov/submissions/CIK{cik}.json"
+        print(f"url im going to: {url}")
+        r = requests.get(url, headers=headers) # request the info from the SEC API
+        return r.json() # gives us the general company json file that includes everything and then we will use this to create a link to the specific file the user wants
+
+    def annual_filing(self, cik, year):
+        # so my goal is to 
+        filings = self.get_filings(cik)["filings"]["recent"]
+        forms = filings["form"]
+        dates = filings["filingDate"]
+        accessionNumber = filings["accessionNumber"]
+        primaryDocument = filings["primaryDocument"]
+        found = False
+        #print(len(forms), len(dates), len(accessionNumber)) # since these are all the same size i can loop through them at the same time using i
+        for i in range(len(forms)):
+            if forms[i] == "10-K" and dates[i][0:4] == str(year): # trying to find the correct form at the correct year and then get the corresponding accessionNumber 
+                accessNumber = accessionNumber[i].replace("-", "")
+                primDocument = primaryDocument[i]
+                found = True
+        if not found:
+            print("Year not found. Try again")
+        else:
+            return f"https://www.sec.gov/Archives/edgar/data/{cik}/{accessNumber}/{primDocument}"
+    
+
+    def quarterly_filing(cik, year, quarter):
+        pass
+
 se = SecEdgar('https://www.sec.gov/files/company_tickers.json')
 # unit testing website: https://www.guru99.com/unit-testing-guide.html
 
-print(se.ticker_to_cik("AAPL"))
-print(se.name_to_cik("Apple Inc."))
+cik = se.ticker_to_cik("AAPL")[0]
+se.annual_filing(cik, 2024)
+
+
